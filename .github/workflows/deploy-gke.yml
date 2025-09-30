@@ -17,35 +17,29 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 1. Authenticate to Google Cloud
     - id: 'auth'
       uses: 'google-github-actions/auth@v2'
       with:
         credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-    # 2. Setup gcloud CLI
     - name: Set up Cloud SDK
       uses: 'google-github-actions/setup-gcloud@v2'
 
-    # 3. Build and Push Docker image to Google Artifact Registry
     - name: Build and Push Image
       run: |-
         gcloud auth configure-docker asia-southeast1-docker.pkg.dev
         docker build -t asia-southeast1-docker.pkg.dev/$GCP_PROJECT_ID/default/$IMAGE_NAME:latest .
         docker push asia-southeast1-docker.pkg.dev/$GCP_PROJECT_ID/default/$IMAGE_NAME:latest
-        
-    # 4. Get GKE credentials
+
     - name: Get GKE credentials
       uses: 'google-github-actions/get-gke-credentials@v2'
       with:
         cluster_name: ${{ env.GKE_CLUSTER }}
         location: ${{ env.GKE_ZONE }}
 
-    # 5. Deploy to GKE
     - name: Deploy to GKE
       run: |-
-        # แทนที่ image placeholder ในไฟล์ deployment.yaml
         sed -i "s|gcr.io/your-project-id/my-gke-app:latest|asia-southeast1-docker.pkg.dev/$GCP_PROJECT_ID/default/$IMAGE_NAME:latest|g" k8s/deployment.yaml
-        
+
         kubectl apply -f k8s/deployment.yaml
         kubectl apply -f k8s/service.yaml
